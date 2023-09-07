@@ -31,12 +31,14 @@ class DBClient {
 
   async nbUsers() {
     await this.client.connect();
-    return this.database.getCollection('users').length
+    const users = await this.client.db(this.database).collection('users').countDocuments();
+    return users
   }
 
   async nbFiles() {
     await this.client.connect();
-    return this.database.getCollection('files').length
+    const files = await this.client.db(this.database).collection('files').countDocuments();
+    return files
   }
 }
 
