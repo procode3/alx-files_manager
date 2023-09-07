@@ -30,14 +30,16 @@ class DBClient {
 
 
   async nbUsers() {
+    await this.client.connect();
     return this.database.getCollection('users').length
   }
 
   async nbFiles() {
+    await this.client.connect();
     return this.database.getCollection('files').length
   }
 }
 
 const dbClient = new DBClient();
 
-module.export = dbClient;
+export { dbClient };
