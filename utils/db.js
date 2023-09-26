@@ -1,47 +1,94 @@
-import { MongoClient } from 'mongodb';
-
+const { MongoClient, ObjectID } = require('mongodb');
+const sha1 = require('sha1');
 
 class DBClient {
   constructor() {
-    const host = process.env.DB_HOST || 'localhost';
-    const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
+    this.host = process.env.DB_HOST || 'localhost';
+    this.port = process.env.DB_PORT || 27017;
+    this.database = process.env.DB_DATABASE || 'files_manager';
 
-    const uri = `mongodb://${host}:${port}/${database}`;
-    this.client = new MongoClient(uri, {
-      userNewUrlParse: true,
-      useUnifiedTopology: true });
-    }
-
-
-  async isAlive() {
-    try {
-      await this.client.connect();
-      return true;
-    }
-    catch{
-      return false;
-    }
-    finally {
-      this.client.close();
-    }
+    this.url = `mongodb://${this.host}:${this.port}`;
+    this.client = new MongoClient(this.url, { useUnifiedTopology: true });
+    this.connected = false;
+    this.client
+      .connect()
+      .then(() => {
+        this.connected = true;
+      })
+      .catch((err) => console.error(err));
   }
 
-
+  isAlive() {
+    return this.connected;
+  }
 
   async nbUsers() {
     await this.client.connect();
-    const users = await this.client.db(this.database).collection('users').countDocuments();
-    return users
+    const users = await this.client
+      .db(this.database)
+      .collection('users')
+      .countDocuments();
+
+    return users;
   }
 
   async nbFiles() {
     await this.client.connect();
-    const files = await this.client.db(this.database).collection('files').countDocuments();
-    return files
+    const files = await this.client
+      .db(this.database)
+      .collection('files')
+      .countDocuments();
+
+    return files;
+  }
+
+  async createUser(email, password) {
+    await this.client.connect();
+
+    const hashedPwd = sha1(password);
+
+    const data = await this.client
+      .db(this.database)
+      .collection('users')
+      .insertOne({
+        email,
+        password: hashedPwd,
+      });
+
+    return data.insertedId.toString();
+  }
+
+  async findUser(...params) {
+    await this.client.connect();
+
+    const [email, password] = params;
+
+    const user = await this.client
+      .db(this.database)
+      .collection('users')
+      .findOne({
+        email,
+        password,
+      });
+
+    return user;
+  }
+
+  async findUserById(id) {
+    await this.client.connect();
+
+    const _id = new ObjectID(id);
+
+    const user = await this.client
+      .db(this.database)
+      .collection('users')
+      .findOne({
+        _id,
+      });
+
+    return user;
   }
 }
 
 const dbClient = new DBClient();
-
-export { dbClient };
+module.exports = dbClient;

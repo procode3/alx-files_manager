@@ -1,88 +1,54 @@
-import redis from 'redis'
-
+import { createClient } from 'redis';
+import { promisify } from 'util';
 
 class RedisClient {
   constructor() {
-    this.client = redis.createClient();
-
-    // Listen for errors and log them to the console
-    this.client.on('error', (error) => {
-      console.error('Redis Error:', error);
-    });
+    this.client = createClient();
     this.connected = false;
-
-    this.client.on('connect', () => {
-      this.connected  = true;
+    this.client.on('error', (error) => {
+      console.error(error);
     });
-
+    this.client.on('connect', () => {
+      this.connected = true;
+    });
   }
 
   isAlive() {
     return this.connected;
-  }  
-  
+  }
 
-  setTimeout(this.isAlive, 3000);
- 
   async get(key) {
+    const getData = promisify(this.client.get).bind(this.client);
+    let data;
+
     try {
-      const value = await new Promise((resolve, reject) => {
-        this.client.get(key, (err, reply) => {
-          if (err) {
-            console.error('Redis Get Error:', err);
-            reject(err);
-          } else {
-            resolve(reply);
-          }
-        });
-      });
-      return value;
-    } catch (error) {
-      console.error('Redis Get Error:', error);
-      throw error;
+      data = await getData(key);
+    } catch (err) {
+      console.error(err);
     }
+    return data;
   }
 
   async set(key, value, duration) {
+    const setData = promisify(this.client.set).bind(this.client);
+
     try {
-      await new Promise((resolve, reject) => {
-        this.client.set(key, value, 'EX', duration, (err) => {
-          if (err) {
-            console.error('Redis Set Error:', err);
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Redis Set Error:', error);
-      throw error;
+      await setData(key, value, 'EX', duration);
+    } catch (err) {
+      console.error(err);
     }
   }
 
   async del(key) {
+    const delData = promisify(this.client.del).bind(this.client);
+
     try {
-      await new Promise((resolve, reject) => {
-        this.client.del(key, (err) => {
-          if (err) {
-            console.error('Redis Delete Error:', err);
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Redis Delete Error:', error);
-      throw error;
+      await delData(key);
+    } catch (err) {
+      console.error(err);
     }
   }
-
- 
-
 }
-const redisClient = new RedisClient()
 
+const redisClient = new RedisClient();
 module.exports = redisClient;
-
